@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.20;
 
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 library ApproveOrRevert {
     /// @notice Thrown if a contract is unable to approve a transfer
@@ -17,7 +17,7 @@ library ApproveOrRevert {
     /// @param token The contract address of the token which will be transferred
     /// @param spender The spender contract address
     /// @param amount The value of the transfer
-    function approveOrRevert(IERC20Upgradeable token, address spender, uint256 amount) internal {
+    function approveOrRevert(IERC20 token, address spender, uint256 amount) internal {
         bytes memory callData = abi.encodeCall(token.approve, (spender, amount));
 
         // solhint-disable-next-line avoid-low-level-calls

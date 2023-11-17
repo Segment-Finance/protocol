@@ -2,11 +2,12 @@
 pragma solidity 0.8.20;
 
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import { ResilientOracleInterface } from "../../../oracle/contracts/interfaces/OracleInterface.sol";
-import { AccessControlledV8 } from "../../../governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { AccessControlledV8 } from "../../../governance/contracts/Governance/AccessControlledV8.sol";
 import { SeToken } from "../SeToken.sol";
 import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
 import { IRiskFund } from "../RiskFund/IRiskFund.sol";
@@ -27,7 +28,7 @@ import { EXP_SCALE } from "../lib/constants.sol";
  * risk fund in exchange for paying off all the pool's bad debt.
  */
 contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGuardUpgradeable, TokenDebtTracker {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     /// @notice Type of auction
     enum AuctionType {
@@ -162,7 +163,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         ensureNonzeroAddress(address(riskFund_));
         require(minimumPoolBadDebt_ != 0, "invalid minimum pool bad debt");
 
-        __Ownable2Step_init();
+        __Ownable_init_unchained(msg.sender);
         __AccessControlled_init_unchained(accessControlManager_);
         __ReentrancyGuard_init();
         __TokenDebtTracker_init();
@@ -202,7 +203,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         uint256 marketsCount = auction.markets.length;
         for (uint256 i; i < marketsCount; ++i) {
             SeToken seToken = SeToken(address(auction.markets[i]));
-            IERC20Upgradeable erc20 = IERC20Upgradeable(address(seToken.underlying()));
+            IERC20 erc20 = IERC20(address(seToken.underlying()));
 
             if (auction.highestBidder != address(0)) {
                 _transferOutOrTrackDebt(erc20, auction.highestBidder, auction.bidAmount[auction.markets[i]]);
@@ -248,7 +249,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         for (uint256 i; i < marketsCount; ++i) {
             SeToken seToken = SeToken(address(auction.markets[i]));
-            IERC20Upgradeable erc20 = IERC20Upgradeable(address(seToken.underlying()));
+            IERC20 erc20 = IERC20(address(seToken.underlying()));
 
             uint256 balanceBefore = erc20.balanceOf(address(auction.markets[i]));
             erc20.safeTransfer(address(auction.markets[i]), auction.bidAmount[auction.markets[i]]);
@@ -269,7 +270,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         address convertibleBaseAsset = riskFund.convertibleBaseAsset();
 
         uint256 transferredAmount = riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
-        _transferOutOrTrackDebt(IERC20Upgradeable(convertibleBaseAsset), auction.highestBidder, riskFundBidAmount);
+        _transferOutOrTrackDebt(IERC20(convertibleBaseAsset), auction.highestBidder, riskFundBidAmount);
 
         emit AuctionClosed(
             comptroller,

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.20;
 
-import "../interfaces/IPancakePair.sol";
+import "../interfaces/IAmmPair.sol";
 import "../interfaces/CustomErrors.sol";
 
-library PancakeLibrary {
+library AmmLibrary {
     /**
      * @notice Used to handle return values from pairs sorted in this order
      * @param tokenA The address of token A
@@ -23,7 +23,7 @@ library PancakeLibrary {
 
     /**
      * @notice Calculates the CREATE2 address for a pair without making any external calls
-     * @param factory Address of the pancake swap factory
+     * @param factory Address of the amm swap factory
      * @param tokenA The address of token A
      * @param tokenB The address of token B
      * @return pair Address for a pair
@@ -48,7 +48,7 @@ library PancakeLibrary {
 
     /**
      * @notice Fetches and sorts the reserves for a pair
-     * @param factory Address of the pancake swap factory
+     * @param factory Address of the amm swap factory
      * @param tokenA The address of token A
      * @param tokenB The address of token B
      * @return reserveA reserveB Reserves for the token A and token B
@@ -60,7 +60,7 @@ library PancakeLibrary {
     ) internal view returns (uint256 reserveA, uint256 reserveB) {
         (address token0, ) = sortTokens(tokenA, tokenB);
         address pairAddress = pairFor(factory, tokenA, tokenB);
-        (uint256 reserve0, uint256 reserve1, ) = IPancakePair(pairAddress).getReserves();
+        (uint256 reserve0, uint256 reserve1, ) = IAmmPair(pairAddress).getReserves();
         (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
     }
 
@@ -127,7 +127,7 @@ library PancakeLibrary {
 
     /**
      * @notice Performs chained getAmountOut calculations on any number of pairs
-     * @param factory Address of the pancake swap factory
+     * @param factory Address of the amm swap factory
      * @param amountIn The amount of tokens to swap.
      * @param path Array with addresses of the underlying assets to be swapped
      * @return amounts Array of amounts after performing swap for respective pairs in path
@@ -153,7 +153,7 @@ library PancakeLibrary {
 
     /**
      * @notice Performs chained getAmountIn calculations on any number of pairs
-     * @param factory Address of the pancake swap factory
+     * @param factory Address of the amm swap factory
      * @param amountOut The amount of the tokens needs to be as output token.
      * @param path Array with addresses of the underlying assets to be swapped
      * @return amounts Array of amounts after performing swap for respective pairs in path

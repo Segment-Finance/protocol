@@ -7,7 +7,7 @@ import "./SeTokenInterfaces.sol";
  * @notice seTokens which wrap an EIP-20 underlying and delegate to an implementation
  * @author Segment
  */
-contract SeBep20Delegator is SeTokenInterface, SeBep20Interface, VDelegatorInterface {
+contract SeBep20Delegator is SeTokenInterface, SeBep20Interface, SeDelegatorInterface {
     /**
      * @notice Construct a new money market
      * @param underlying_ The address of the underlying asset

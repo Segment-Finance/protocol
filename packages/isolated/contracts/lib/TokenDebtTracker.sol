@@ -3,8 +3,8 @@
 pragma solidity 0.8.20;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title TokenDebtTracker
@@ -16,21 +16,21 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
  * using balanceOf(address(this))!
  */
 abstract contract TokenDebtTracker is Initializable {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     /**
-     * @notice Mapping (IERC20Upgradeable token => (address user => uint256 amount)).
+     * @notice Mapping (IERC20 token => (address user => uint256 amount)).
      * Tracks failed transfers: when a token transfer fails, we record the
      * amount of the transfer, so that the user can redeem this debt later.
      */
-    mapping(IERC20Upgradeable => mapping(address => uint256)) public tokenDebt;
+    mapping(IERC20 => mapping(address => uint256)) public tokenDebt;
 
     /**
-     * @notice Mapping (IERC20Upgradeable token => uint256 amount) shows how many
+     * @notice Mapping (IERC20 token => uint256 amount) shows how many
      * tokens the contract owes to all users. This is useful for accounting to
      * understand how much of balanceOf(address(this)) is already owed to users.
      */
-    mapping(IERC20Upgradeable => uint256) public totalTokenDebt;
+    mapping(IERC20 => uint256) public totalTokenDebt;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -78,7 +78,7 @@ abstract contract TokenDebtTracker is Initializable {
      * @param amount_ The amount of tokens to claim (or max uint256 to claim all)
      * @custom:error InsufficientDebt The contract doesn't have enough debt to the user
      */
-    function claimTokenDebt(IERC20Upgradeable token, uint256 amount_) external {
+    function claimTokenDebt(IERC20 token, uint256 amount_) external {
         uint256 owedAmount = tokenDebt[token][msg.sender];
         uint256 amount = (amount_ == type(uint256).max ? owedAmount : amount_);
         if (amount > owedAmount) {
@@ -110,7 +110,7 @@ abstract contract TokenDebtTracker is Initializable {
      * @param amount The amount to transfer
      * @custom:error InsufficientBalance The contract doesn't have enough balance to transfer
      */
-    function _transferOutOrTrackDebt(IERC20Upgradeable token, address to, uint256 amount) internal {
+    function _transferOutOrTrackDebt(IERC20 token, address to, uint256 amount) internal {
         uint256 balance = token.balanceOf(address(this));
         if (balance < amount) {
             revert InsufficientBalance(address(token), address(this), amount, balance);
@@ -125,7 +125,7 @@ abstract contract TokenDebtTracker is Initializable {
      * @param to The recipient of the transfer
      * @param amount The amount to transfer
      */
-    function _transferOutOrTrackDebtSkippingBalanceCheck(IERC20Upgradeable token, address to, uint256 amount) internal {
+    function _transferOutOrTrackDebtSkippingBalanceCheck(IERC20 token, address to, uint256 amount) internal {
         // We can't use safeTransfer here because we can't try-catch internal calls
         bool success = _tryTransferOut(token, to, amount);
         if (!success) {
@@ -144,7 +144,7 @@ abstract contract TokenDebtTracker is Initializable {
      * @param amount The amount to transfer
      * @return true if the transfer succeeded, false otherwise
      */
-    function _tryTransferOut(IERC20Upgradeable token, address to, uint256 amount) private returns (bool) {
+    function _tryTransferOut(IERC20 token, address to, uint256 amount) private returns (bool) {
         bytes memory callData = abi.encodeCall(token.transfer, (to, amount));
 
         // solhint-disable-next-line avoid-low-level-calls

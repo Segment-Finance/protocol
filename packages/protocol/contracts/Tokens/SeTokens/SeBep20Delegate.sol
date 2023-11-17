@@ -7,7 +7,7 @@ import "./SeBep20.sol";
  * @notice SeTokens which wrap an EIP-20 underlying and are delegated to
  * @author Segment
  */
-contract SeBep20Delegate is SeBep20, VDelegateInterface {
+contract SeBep20Delegate is SeBep20, SeDelegateInterface {
     /**
      * @notice Construct an empty delegate
      */

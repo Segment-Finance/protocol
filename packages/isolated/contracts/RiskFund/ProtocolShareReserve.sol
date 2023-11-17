@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.20;
 
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { IProtocolShareReserve } from "./IProtocolShareReserve.sol";
 import { ExponentialNoError } from "../ExponentialNoError.sol";
@@ -11,7 +11,7 @@ import { IRiskFund } from "./IRiskFund.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 
 contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     address public protocolIncome;
     address public riskFund;
@@ -28,9 +28,9 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
         address corePoolComptroller_,
-        address vbnb_,
+        address sebnb_,
         address nativeWrapped_
-    ) ReserveHelpers(corePoolComptroller_, vbnb_, nativeWrapped_) {
+    ) ReserveHelpers(corePoolComptroller_, sebnb_, nativeWrapped_) {
         _disableInitializers();
     }
 
@@ -45,7 +45,7 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
         ensureNonzeroAddress(protocolIncome_);
         ensureNonzeroAddress(riskFund_);
 
-        __Ownable2Step_init();
+        __Ownable_init_unchained(msg.sender);
 
         protocolIncome = protocolIncome_;
         riskFund = riskFund_;
@@ -86,8 +86,8 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
 
         emit FundsReleased(comptroller, asset, amount);
 
-        IERC20Upgradeable(asset).safeTransfer(protocolIncome, protocolIncomeAmount);
-        IERC20Upgradeable(asset).safeTransfer(riskFund_, amount - protocolIncomeAmount);
+        IERC20(asset).safeTransfer(protocolIncome, protocolIncomeAmount);
+        IERC20(asset).safeTransfer(riskFund_, amount - protocolIncomeAmount);
 
         // Update the pool asset's state in the risk fund for the above transfer.
         IRiskFund(riskFund_).updateAssetsState(comptroller, asset);

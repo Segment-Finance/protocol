@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.20;
 
-import { IAccessControlManagerV8 } from "../../governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
+import { IAccessControlManagerV8 } from "../../governance/contracts/Governance/IAccessControlManagerV8.sol";
 
 import { InterestRateModel } from "./InterestRateModel.sol";
 import { BLOCKS_PER_YEAR, EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";

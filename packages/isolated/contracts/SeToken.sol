@@ -2,9 +2,10 @@
 pragma solidity 0.8.20;
 
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import { AccessControlledV8 } from "../../governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import { AccessControlledV8 } from "../../governance/contracts/Governance/AccessControlledV8.sol";
 
 import { SeTokenInterface } from "./SeTokenInterfaces.sol";
 import { ComptrollerInterface, ComptrollerViewInterface } from "./ComptrollerInterface.sol";
@@ -47,7 +48,7 @@ contract SeToken is
     ExponentialNoError,
     TokenErrorReporter
 {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     uint256 internal constant DEFAULT_PROTOCOL_SEIZE_SHARE_MANTISSA = 5e16; // 5%
 
@@ -82,7 +83,7 @@ contract SeToken is
      * @param admin_ Address of the administrator of this token
      * @param accessControlManager_ AccessControlManager contract address
      * @param riskManagement Addresses of risk & income related contracts
-     * @param reserveFactorMantissa_ Percentage of borrow interest that goes to reserves (from 0 to 1e18)
+
      * @custom:error ZeroAddressNotAllowed is thrown when admin address is zero
      * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
      * @custom:error ZeroAddressNotAllowed is thrown when protocol share reserve address is zero
@@ -97,8 +98,8 @@ contract SeToken is
         uint8 decimals_,
         address admin_,
         address accessControlManager_,
-        RiskManagementInit memory riskManagement,
-        uint256 reserveFactorMantissa_
+        RiskManagementInit memory riskManagement
+        //uint256 reserveFactorMantissa_
     ) external initializer {
         ensureNonzeroAddress(admin_);
 
@@ -113,8 +114,8 @@ contract SeToken is
             decimals_,
             admin_,
             accessControlManager_,
-            riskManagement,
-            reserveFactorMantissa_
+            riskManagement
+            //reserveFactorMantissa_
         );
     }
 
@@ -600,7 +601,7 @@ contract SeToken is
      * @param token The address of the ERC-20 token to sweep
      * @custom:access Only Governance
      */
-    function sweepToken(IERC20Upgradeable token) external override {
+    function sweepToken(IERC20 token) external override {
         require(msg.sender == owner(), "SeToken::sweepToken: only admin can sweep tokens");
         require(address(token) != underlying, "SeToken::sweepToken: can not sweep underlying token");
         uint256 balance = token.balanceOf(address(this));
@@ -1303,7 +1304,7 @@ contract SeToken is
      * @return Actual amount received
      */
     function _doTransferIn(address from, uint256 amount) internal virtual returns (uint256) {
-        IERC20Upgradeable token = IERC20Upgradeable(underlying);
+        IERC20 token = IERC20(underlying);
         uint256 balanceBefore = token.balanceOf(address(this));
         token.safeTransferFrom(from, address(this), amount);
         uint256 balanceAfter = token.balanceOf(address(this));
@@ -1317,7 +1318,7 @@ contract SeToken is
      * @param amount Amount of underlying to transfer
      */
     function _doTransferOut(address to, uint256 amount) internal virtual {
-        IERC20Upgradeable token = IERC20Upgradeable(underlying);
+        IERC20 token = IERC20(underlying);
         token.safeTransfer(to, amount);
     }
 
@@ -1378,7 +1379,7 @@ contract SeToken is
      * @param admin_ Address of the administrator of this token
      * @param accessControlManager_ AccessControlManager contract address
      * @param riskManagement Addresses of risk & income related contracts
-     * @param reserveFactorMantissa_ Percentage of borrow interest that goes to reserves (from 0 to 1e18)
+
      */
     function _initialize(
         address underlying_,
@@ -1390,10 +1391,10 @@ contract SeToken is
         uint8 decimals_,
         address admin_,
         address accessControlManager_,
-        RiskManagementInit memory riskManagement,
-        uint256 reserveFactorMantissa_
+        RiskManagementInit memory riskManagement
+        //uint256 reserveFactorMantissa_
     ) internal onlyInitializing {
-        __Ownable2Step_init();
+        __Ownable_init_unchained(msg.sender);
         __AccessControlled_init_unchained(accessControlManager_);
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
 
@@ -1410,7 +1411,7 @@ contract SeToken is
         // Set the interest rate model (depends on block number / borrow index)
         _setInterestRateModelFresh(interestRateModel_);
 
-        _setReserveFactorFresh(reserveFactorMantissa_);
+        //_setReserveFactorFresh(reserveFactorMantissa_);
 
         name = name_;
         symbol = symbol_;
@@ -1421,7 +1422,7 @@ contract SeToken is
 
         // Set underlying and sanity check it
         underlying = underlying_;
-        IERC20Upgradeable(underlying).totalSupply();
+        IERC20(underlying).totalSupply();
 
         // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
         _notEntered = true;
@@ -1448,7 +1449,7 @@ contract SeToken is
      * @return The quantity of underlying tokens owned by this contract
      */
     function _getCashPrior() internal view virtual returns (uint256) {
-        IERC20Upgradeable token = IERC20Upgradeable(underlying);
+        IERC20 token = IERC20(underlying);
         return token.balanceOf(address(this));
     }
 

@@ -3,9 +3,9 @@
 pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import "./interfaces/VBep20Interface.sol";
+import "./interfaces/SeBep20Interface.sol";
 import "./interfaces/OracleInterface.sol";
-import "../governance-contracts/Governance/AccessControlledV8.sol";
+import "../../governance/contracts/Governance/AccessControlledV8.sol";
 
 /**
  * @title ResilientOracle
@@ -18,7 +18,7 @@ import "../governance-contracts/Governance/AccessControlledV8.sol";
  *
  * The Resilient Oracle uses multiple sources and fallback mechanisms to provide accurate prices and protect
  * the protocol from oracle attacks. Currently it includes integrations with Chainlink, Pyth, Binance Oracle
- * and TWAP (Time-Weighted Average Price) oracles. TWAP uses PancakeSwap as the on-chain price source.
+ * and TWAP (Time-Weighted Average Price) oracles. TWAP uses AmmSwap as the on-chain price source.
  *
  * For every market (seToken) we configure the main, pivot and fallback oracles. The oracles are configured per
  * seToken's underlying asset address. The main oracle oracle is the most trustworthy price source, the pivot
@@ -447,7 +447,7 @@ contract ResilientOracle is PausableUpgradeable, AccessControlledV8, ResilientOr
         } else if (address(seToken) == SEUSD) {
             asset = SEUSD;
         } else {
-            asset = VBep20Interface(seToken).underlying();
+            asset = SeBep20Interface(seToken).underlying();
         }
     }
 }

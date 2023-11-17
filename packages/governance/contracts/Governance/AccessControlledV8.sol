@@ -32,7 +32,7 @@ abstract contract AccessControlledV8 is Initializable, Ownable2StepUpgradeable {
     error Unauthorized(address sender, address calledContract, string methodSignature);
 
     function __AccessControlled_init(address accessControlManager_) internal onlyInitializing {
-        __Ownable2Step_init();
+        __Ownable_init_unchained(msg.sender);
         __AccessControlled_init_unchained(accessControlManager_);
     }
 

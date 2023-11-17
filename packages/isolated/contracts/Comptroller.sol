@@ -3,7 +3,7 @@ pragma solidity 0.8.20;
 
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { ResilientOracleInterface } from "../../oracle/contracts/interfaces/OracleInterface.sol";
-import { AccessControlledV8 } from "../../governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { AccessControlledV8 } from "../../governance/contracts/Governance/AccessControlledV8.sol";
 
 import { ComptrollerInterface } from "./ComptrollerInterface.sol";
 import { ComptrollerStorage } from "./ComptrollerStorage.sol";
@@ -166,7 +166,7 @@ contract Comptroller is
      * @param accessControlManager Access control manager contract address
      */
     function initialize(uint256 loopLimit, address accessControlManager) external initializer {
-        __Ownable2Step_init();
+        __Ownable_init_unchained(msg.sender);
         __AccessControlled_init_unchained(accessControlManager);
 
         _setMaxLoopsLimit(loopLimit);

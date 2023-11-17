@@ -309,14 +309,14 @@ abstract contract SeBep20Interface is SeBep20Storage {
     function _addReserves(uint addAmount) virtual external returns (uint);
 }
 
-contract VDelegationStorage {
+contract SeDelegationStorage {
     /**
      * @notice Implementation address for this contract
      */
     address public implementation;
 }
 
-abstract contract VDelegatorInterface is VDelegationStorage {
+abstract contract SeDelegatorInterface is SeDelegationStorage {
     /**
      * @notice Emitted when implementation is changed
      */
@@ -335,7 +335,7 @@ abstract contract VDelegatorInterface is VDelegationStorage {
     ) virtual public;
 }
 
-abstract contract VDelegateInterface is VDelegationStorage {
+abstract contract SeDelegateInterface is SeDelegationStorage {
     /**
      * @notice Called by the delegator on a delegate to initialize it for duty
      * @dev Should revert if any issues arise which make it unfit for delegation

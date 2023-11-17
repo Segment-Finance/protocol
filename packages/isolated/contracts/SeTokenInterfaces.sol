@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.20;
 
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import { ResilientOracleInterface } from "../../oracle/contracts/interfaces/OracleInterface.sol";
 
 import { ComptrollerInterface } from "./ComptrollerInterface.sol";
@@ -311,7 +312,7 @@ abstract contract SeTokenInterface is SeTokenStorage {
 
     function accrueInterest() external virtual returns (uint256);
 
-    function sweepToken(IERC20Upgradeable token) external virtual;
+    function sweepToken(IERC20 token) external virtual;
 
     /*** Admin Functions ***/
 

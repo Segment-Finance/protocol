@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./interfaces/IPancakeSwapV2Router.sol";
+import "./interfaces/IAmmSwapV2Router.sol";
 import "./interfaces/ISeToken.sol";
 import "./RouterHelper.sol";
 import "./interfaces/ISeBNB.sol";
@@ -13,13 +13,13 @@ import "./interfaces/InterfaceComptroller.sol";
 import "./lib/TransferHelper.sol";
 
 /**
- * @title Segment's Pancake Swap Integration Contract
+ * @title Segment's Amm Swap Integration Contract
  * @notice This contracts allows users to swap a token for another one and supply/repay with the latter.
  * @dev For all functions that do not swap native BNB, user must approve this contract with the amount, prior the calling the swap function.
  * @author 0xlucian
  */
 
-contract SwapRouter is Ownable2Step, RouterHelper, IPancakeSwapV2Router {
+contract SwapRouter is Ownable2Step, RouterHelper, IAmmSwapV2Router {
     using SafeERC20 for IERC20;
 
     address public immutable comptrollerAddress;
@@ -68,7 +68,7 @@ contract SwapRouter is Ownable2Step, RouterHelper, IPancakeSwapV2Router {
     event SweepToken(address indexed token, address indexed to, uint256 sweepAmount);
 
     /// @notice event emitted on seBNBAddress update
-    event VBNBAddressUpdated(address indexed oldAddress, address indexed newAddress);
+    event SeBNBAddressUpdated(address indexed oldAddress, address indexed newAddress);
 
     // *********************
     // **** CONSTRUCTOR ****
@@ -102,7 +102,7 @@ contract SwapRouter is Ownable2Step, RouterHelper, IPancakeSwapV2Router {
      * @notice Setter for the seBNB address.
      * @param _seBNBAddress Address of the BNB seToken to update.
      */
-    function setVBNBAddress(address _seBNBAddress) external onlyOwner {
+    function setSeBNBAddress(address _seBNBAddress) external onlyOwner {
         if (_seBNBAddress == address(0)) {
             revert ZeroAddress();
         }
@@ -112,7 +112,7 @@ contract SwapRouter is Ownable2Step, RouterHelper, IPancakeSwapV2Router {
         address oldAddress = seBNBAddress;
         seBNBAddress = _seBNBAddress;
 
-        emit VBNBAddressUpdated(oldAddress, seBNBAddress);
+        emit SeBNBAddressUpdated(oldAddress, seBNBAddress);
     }
 
     /**
@@ -278,7 +278,7 @@ contract SwapRouter is Ownable2Step, RouterHelper, IPancakeSwapV2Router {
         _swapExactTokensForBNB(amountIn, amountOutMin, path, address(this), TypesOfTokens.NON_SUPPORTING_FEE);
         uint256 balanceAfter = address(this).balance;
         uint256 swapAmount = balanceAfter - balanceBefore;
-        _mintVBNBandTransfer(swapAmount);
+        _mintSeBNBandTransfer(swapAmount);
     }
 
     /**
@@ -303,7 +303,7 @@ contract SwapRouter is Ownable2Step, RouterHelper, IPancakeSwapV2Router {
         if (swapAmount < amountOutMin) {
             revert SwapAmountLessThanAmountOutMin(swapAmount, amountOutMin);
         }
-        _mintVBNBandTransfer(swapAmount);
+        _mintSeBNBandTransfer(swapAmount);
     }
 
     /**
@@ -325,7 +325,7 @@ contract SwapRouter is Ownable2Step, RouterHelper, IPancakeSwapV2Router {
         _swapTokensForExactBNB(amountOut, amountInMax, path, address(this));
         uint256 balanceAfter = address(this).balance;
         uint256 swapAmount = balanceAfter - balanceBefore;
-        _mintVBNBandTransfer(swapAmount);
+        _mintSeBNBandTransfer(swapAmount);
     }
 
     /**
@@ -938,7 +938,7 @@ contract SwapRouter is Ownable2Step, RouterHelper, IPancakeSwapV2Router {
      * @notice Mint seBNB tokens to the market then transfer them to user
      * @param swapAmount Swapped BNB amount
      */
-    function _mintVBNBandTransfer(uint256 swapAmount) internal {
+    function _mintSeBNBandTransfer(uint256 swapAmount) internal {
         uint256 seBNBBalanceBefore = ISeBNB(seBNBAddress).balanceOf(address(this));
         ISeBNB(seBNBAddress).mint{ value: swapAmount }();
         uint256 seBNBBalanceAfter = ISeBNB(seBNBAddress).balanceOf(address(this));

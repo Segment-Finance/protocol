@@ -57,7 +57,7 @@ contract SwapDebtDelegate is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     using SafeERC20 for IERC20;
 
     function initialize() external initializer {
-        __Ownable2Step_init();
+        __Ownable_init_unchained(msg.sender);
         __ReentrancyGuard_init();
     }
 

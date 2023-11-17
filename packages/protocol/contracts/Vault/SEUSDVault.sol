@@ -4,7 +4,7 @@ import "../Utils/SafeBEP20.sol";
 import "../Utils/IBEP20.sol";
 import "./SEUSDVaultStorage.sol";
 import "./SEUSDVaultErrorReporter.sol";
-import "../../../governance-contracts/contracts/Governance/AccessControlledV5.sol";
+import "../../../governance/contracts/Governance/AccessControlledV5.sol";
 
 interface ISEUSDVaultProxy {
     function _acceptImplementation() external returns (uint);

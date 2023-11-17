@@ -2,12 +2,12 @@
 pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "../interfaces/VBep20Interface.sol";
+import "../interfaces/SeBep20Interface.sol";
 import "../interfaces/SIDRegistryInterface.sol";
 import "../interfaces/FeedRegistryInterface.sol";
 import "../interfaces/PublicResolverInterface.sol";
 import "../interfaces/OracleInterface.sol";
-import "../../governance-contracts/Governance/AccessControlledV8.sol";
+import "../../../governance/contracts/Governance/AccessControlledV8.sol";
 import "../interfaces/OracleInterface.sol";
 
 /**

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.20;
 
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import { AccessControlledV8 } from "../../../governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import { AccessControlledV8 } from "../../../governance/contracts/Governance/AccessControlledV8.sol";
 import { ResilientOracleInterface } from "../../../oracle/contracts/interfaces/OracleInterface.sol";
 import { ComptrollerInterface } from "../ComptrollerInterface.sol";
 import { IRiskFund } from "./IRiskFund.sol";
@@ -13,7 +14,7 @@ import { SeToken } from "../SeToken.sol";
 import { ComptrollerViewInterface } from "../ComptrollerInterface.sol";
 import { Comptroller } from "../Comptroller.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
-import { IPancakeswapV2Router } from "../IPancakeswapV2Router.sol";
+import { IAmmSwapV2Router } from "../IAmmSwapV2Router.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ApproveOrRevert } from "../lib/ApproveOrRevert.sol";
@@ -25,12 +26,12 @@ import { ApproveOrRevert } from "../lib/ApproveOrRevert.sol";
  * @dev This contract does not support BNB.
  */
 contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, MaxLoopsLimitHelper, IRiskFund {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-    using ApproveOrRevert for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
+    using ApproveOrRevert for IERC20;
 
     address public convertibleBaseAsset;
     address public shortfall;
-    address public pancakeSwapRouter;
+    address public ammSwapRouter;
     uint256 public minAmountToConvert;
 
     /// @notice Emitted when pool registry address is updated
@@ -42,8 +43,8 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     /// @notice Emitted when convertible base asset is updated
     event ConvertibleBaseAssetUpdated(address indexed oldConvertibleBaseAsset, address indexed newConvertibleBaseAsset);
 
-    /// @notice Emitted when PancakeSwap router contract address is updated
-    event PancakeSwapRouterUpdated(address indexed oldPancakeSwapRouter, address indexed newPancakeSwapRouter);
+    /// @notice Emitted when AmmSwap router contract address is updated
+    event ammSwapRouterUpdated(address indexed oldammSwapRouter, address indexed newammSwapRouter);
 
     /// @notice Emitted when minimum amount to convert is updated
     event MinAmountToConvertUpdated(uint256 oldMinAmountToConvert, uint256 newMinAmountToConvert);
@@ -59,15 +60,15 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
         address corePoolComptroller_,
-        address vbnb_,
+        address sebnb_,
         address nativeWrapped_
-    ) ReserveHelpers(corePoolComptroller_, vbnb_, nativeWrapped_) {
+    ) ReserveHelpers(corePoolComptroller_, sebnb_, nativeWrapped_) {
         _disableInitializers();
     }
 
     /**
      * @notice Initializes the deployer to owner.
-     * @param pancakeSwapRouter_ Address of the PancakeSwap router
+     * @param ammSwapRouter_ Address of the AmmSwap router. Allows zero, can be updated later.
      * @param minAmountToConvert_ Minimum amount assets must be worth to convert into base asset
      * @param convertibleBaseAsset_ Address of the base asset
      * @param accessControlManager_ Address of the access control contract
@@ -76,21 +77,21 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
      * @custom:error ZeroAddressNotAllowed is thrown when convertible base asset address is zero
      */
     function initialize(
-        address pancakeSwapRouter_,
+        address ammSwapRouter_,
         uint256 minAmountToConvert_,
         address convertibleBaseAsset_,
         address accessControlManager_,
         uint256 loopsLimit_
     ) external initializer {
-        ensureNonzeroAddress(pancakeSwapRouter_);
+
         ensureNonzeroAddress(convertibleBaseAsset_);
         require(minAmountToConvert_ > 0, "Risk Fund: Invalid min amount to convert");
         require(loopsLimit_ > 0, "Risk Fund: Loops limit can not be zero");
 
-        __Ownable2Step_init();
+        __Ownable_init_unchained(msg.sender);
         __AccessControlled_init_unchained(accessControlManager_);
 
-        pancakeSwapRouter = pancakeSwapRouter_;
+        ammSwapRouter = ammSwapRouter_;
         minAmountToConvert = minAmountToConvert_;
         convertibleBaseAsset = convertibleBaseAsset_;
 
@@ -123,15 +124,15 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     }
 
     /**
-     * @notice PancakeSwap router address setter
-     * @param pancakeSwapRouter_ Address of the PancakeSwap router
+     * @notice AmmSwap router address setter
+     * @param ammSwapRouter_ Address of the AmmSwap router
      * @custom:error ZeroAddressNotAllowed is thrown when PCS router address is zero
      */
-    function setPancakeSwapRouter(address pancakeSwapRouter_) external onlyOwner {
-        ensureNonzeroAddress(pancakeSwapRouter_);
-        address oldPancakeSwapRouter = pancakeSwapRouter;
-        pancakeSwapRouter = pancakeSwapRouter_;
-        emit PancakeSwapRouterUpdated(oldPancakeSwapRouter, pancakeSwapRouter_);
+    function setammSwapRouter(address ammSwapRouter_) external onlyOwner {
+        ensureNonzeroAddress(ammSwapRouter_);
+        address oldammSwapRouter = ammSwapRouter;
+        ammSwapRouter = ammSwapRouter_;
+        emit ammSwapRouterUpdated(oldammSwapRouter, ammSwapRouter_);
     }
 
     /**
@@ -231,7 +232,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
         }
 
         emit TransferredReserveForAuction(comptroller, amount);
-        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall_, amount);
+        IERC20(convertibleBaseAsset).safeTransfer(shortfall_, amount);
 
         return amount;
     }
@@ -304,10 +305,10 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
                 path[path.length - 1] == convertibleBaseAsset_,
                 "RiskFund: finally path must be convertible base asset"
             );
-            address pancakeSwapRouter_ = pancakeSwapRouter;
-            IERC20Upgradeable(underlyingAsset).approveOrRevert(pancakeSwapRouter_, 0);
-            IERC20Upgradeable(underlyingAsset).approveOrRevert(pancakeSwapRouter_, balanceOfUnderlyingAsset);
-            uint256[] memory amounts = IPancakeswapV2Router(pancakeSwapRouter_).swapExactTokensForTokens(
+            address ammSwapRouter_ = ammSwapRouter;
+            IERC20(underlyingAsset).approveOrRevert(ammSwapRouter_, 0);
+            IERC20(underlyingAsset).approveOrRevert(ammSwapRouter_, balanceOfUnderlyingAsset);
+            uint256[] memory amounts = IAmmSwapV2Router(ammSwapRouter_).swapExactTokensForTokens(
                 balanceOfUnderlyingAsset,
                 amountOutMin,
                 path,

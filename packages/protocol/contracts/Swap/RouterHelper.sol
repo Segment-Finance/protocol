@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./lib/PancakeLibrary.sol";
+import "./lib/AmmLibrary.sol";
 import "./interfaces/IWBNB.sol";
 import "./lib/TransferHelper.sol";
 
@@ -22,7 +22,7 @@ abstract contract RouterHelper is IRouterHelper {
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable WBNB;
 
-    /// @notice Address of pancake swap factory contract.
+    /// @notice Address of amm swap factory contract.
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable factory;
 
@@ -65,13 +65,13 @@ abstract contract RouterHelper is IRouterHelper {
     function _swap(uint256[] memory amounts, address[] memory path, address _to) internal virtual {
         for (uint256 i; i < path.length - 1; ) {
             (address input, address output) = (path[i], path[i + 1]);
-            (address token0, ) = PancakeLibrary.sortTokens(input, output);
+            (address token0, ) = AmmLibrary.sortTokens(input, output);
             uint256 amountOut = amounts[i + 1];
             (uint256 amount0Out, uint256 amount1Out) = input == token0
                 ? (uint256(0), amountOut)
                 : (amountOut, uint256(0));
-            address to = i < path.length - 2 ? PancakeLibrary.pairFor(factory, output, path[i + 2]) : _to;
-            IPancakePair(PancakeLibrary.pairFor(factory, input, output)).swap(amount0Out, amount1Out, to, new bytes(0));
+            address to = i < path.length - 2 ? AmmLibrary.pairFor(factory, output, path[i + 2]) : _to;
+            IAmmPair(AmmLibrary.pairFor(factory, input, output)).swap(amount0Out, amount1Out, to, new bytes(0));
             unchecked {
                 i += 1;
             }
@@ -89,8 +89,8 @@ abstract contract RouterHelper is IRouterHelper {
     function _swapSupportingFeeOnTransferTokens(address[] memory path, address _to) internal virtual {
         for (uint256 i; i < path.length - 1; ) {
             (address input, address output) = (path[i], path[i + 1]);
-            (address token0, ) = PancakeLibrary.sortTokens(input, output);
-            IPancakePair pair = IPancakePair(PancakeLibrary.pairFor(factory, input, output));
+            (address token0, ) = AmmLibrary.sortTokens(input, output);
+            IAmmPair pair = IAmmPair(AmmLibrary.pairFor(factory, input, output));
             uint256 amountInput;
             uint256 amountOutput;
             {
@@ -102,12 +102,12 @@ abstract contract RouterHelper is IRouterHelper {
 
                 uint256 balance = IERC20(input).balanceOf(address(pair));
                 amountInput = balance - reserveInput;
-                amountOutput = PancakeLibrary.getAmountOut(amountInput, reserveInput, reserveOutput);
+                amountOutput = AmmLibrary.getAmountOut(amountInput, reserveInput, reserveOutput);
             }
             (uint256 amount0Out, uint256 amount1Out) = input == token0
                 ? (uint256(0), amountOutput)
                 : (amountOutput, uint256(0));
-            address to = i < path.length - 2 ? PancakeLibrary.pairFor(factory, output, path[i + 2]) : _to;
+            address to = i < path.length - 2 ? AmmLibrary.pairFor(factory, output, path[i + 2]) : _to;
             pair.swap(amount0Out, amount1Out, to, new bytes(0));
             unchecked {
                 i += 1;
@@ -131,9 +131,9 @@ abstract contract RouterHelper is IRouterHelper {
         address to,
         TypesOfTokens swapFor
     ) internal returns (uint256[] memory amounts) {
-        address pairAddress = PancakeLibrary.pairFor(factory, path[0], path[1]);
+        address pairAddress = AmmLibrary.pairFor(factory, path[0], path[1]);
         if (swapFor == TypesOfTokens.NON_SUPPORTING_FEE) {
-            amounts = PancakeLibrary.getAmountsOut(factory, amountIn, path);
+            amounts = AmmLibrary.getAmountsOut(factory, amountIn, path);
             if (amounts[amounts.length - 1] < amountOutMin) {
                 revert OutputAmountBelowMinimum(amounts[amounts.length - 1], amountOutMin);
             }
@@ -166,9 +166,9 @@ abstract contract RouterHelper is IRouterHelper {
             revert WrongAddress(wBNBAddress, path[0]);
         }
         IWBNB(wBNBAddress).deposit{ value: msg.value }();
-        TransferHelper.safeTransfer(wBNBAddress, PancakeLibrary.pairFor(factory, path[0], path[1]), msg.value);
+        TransferHelper.safeTransfer(wBNBAddress, AmmLibrary.pairFor(factory, path[0], path[1]), msg.value);
         if (swapFor == TypesOfTokens.NON_SUPPORTING_FEE) {
-            amounts = PancakeLibrary.getAmountsOut(factory, msg.value, path);
+            amounts = AmmLibrary.getAmountsOut(factory, msg.value, path);
             if (amounts[amounts.length - 1] < amountOutMin) {
                 revert OutputAmountBelowMinimum(amounts[amounts.length - 1], amountOutMin);
             }
@@ -201,14 +201,14 @@ abstract contract RouterHelper is IRouterHelper {
         }
         uint256 WBNBAmount;
         if (swapFor == TypesOfTokens.NON_SUPPORTING_FEE) {
-            amounts = PancakeLibrary.getAmountsOut(factory, amountIn, path);
+            amounts = AmmLibrary.getAmountsOut(factory, amountIn, path);
             if (amounts[amounts.length - 1] < amountOutMin) {
                 revert OutputAmountBelowMinimum(amounts[amounts.length - 1], amountOutMin);
             }
             TransferHelper.safeTransferFrom(
                 path[0],
                 msg.sender,
-                PancakeLibrary.pairFor(factory, path[0], path[1]),
+                AmmLibrary.pairFor(factory, path[0], path[1]),
                 amounts[0]
             );
             _swap(amounts, path, address(this));
@@ -218,7 +218,7 @@ abstract contract RouterHelper is IRouterHelper {
             TransferHelper.safeTransferFrom(
                 path[0],
                 msg.sender,
-                PancakeLibrary.pairFor(factory, path[0], path[1]),
+                AmmLibrary.pairFor(factory, path[0], path[1]),
                 amountIn
             );
             _swapSupportingFeeOnTransferTokens(path, address(this));
@@ -250,14 +250,14 @@ abstract contract RouterHelper is IRouterHelper {
         address[] calldata path,
         address to
     ) internal returns (uint256[] memory amounts) {
-        amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
+        amounts = AmmLibrary.getAmountsIn(factory, amountOut, path);
         if (amounts[0] > amountInMax) {
             revert InputAmountAboveMaximum(amounts[0], amountInMax);
         }
         TransferHelper.safeTransferFrom(
             path[0],
             msg.sender,
-            PancakeLibrary.pairFor(factory, path[0], path[1]),
+            AmmLibrary.pairFor(factory, path[0], path[1]),
             amounts[0]
         );
         _swap(amounts, path, to);
@@ -279,12 +279,12 @@ abstract contract RouterHelper is IRouterHelper {
         if (path[0] != WBNB) {
             revert WrongAddress(WBNB, path[0]);
         }
-        amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
+        amounts = AmmLibrary.getAmountsIn(factory, amountOut, path);
         if (amounts[0] > msg.value) {
             revert ExcessiveInputAmount(amounts[0], msg.value);
         }
         IWBNB(WBNB).deposit{ value: amounts[0] }();
-        TransferHelper.safeTransfer(WBNB, PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
+        TransferHelper.safeTransfer(WBNB, AmmLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
         _swap(amounts, path, to);
         // refund dust BNB, if any
         if (msg.value > amounts[0]) TransferHelper.safeTransferBNB(msg.sender, msg.value - amounts[0]);
@@ -308,14 +308,14 @@ abstract contract RouterHelper is IRouterHelper {
         if (path[path.length - 1] != WBNB) {
             revert WrongAddress(WBNB, path[path.length - 1]);
         }
-        amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
+        amounts = AmmLibrary.getAmountsIn(factory, amountOut, path);
         if (amounts[0] > amountInMax) {
             revert InputAmountAboveMaximum(amounts[amounts.length - 1], amountInMax);
         }
         TransferHelper.safeTransferFrom(
             path[0],
             msg.sender,
-            PancakeLibrary.pairFor(factory, path[0], path[1]),
+            AmmLibrary.pairFor(factory, path[0], path[1]),
             amounts[0]
         );
         _swap(amounts, path, address(this));
@@ -340,7 +340,7 @@ abstract contract RouterHelper is IRouterHelper {
         uint256 reserveA,
         uint256 reserveB
     ) external pure virtual override returns (uint256 amountB) {
-        return PancakeLibrary.quote(amountA, reserveA, reserveB);
+        return AmmLibrary.quote(amountA, reserveA, reserveB);
     }
 
     /**
@@ -355,7 +355,7 @@ abstract contract RouterHelper is IRouterHelper {
         uint256 reserveIn,
         uint256 reserveOut
     ) external pure virtual override returns (uint256 amountOut) {
-        return PancakeLibrary.getAmountOut(amountIn, reserveIn, reserveOut);
+        return AmmLibrary.getAmountOut(amountIn, reserveIn, reserveOut);
     }
 
     /**
@@ -370,7 +370,7 @@ abstract contract RouterHelper is IRouterHelper {
         uint256 reserveIn,
         uint256 reserveOut
     ) external pure virtual override returns (uint256 amountIn) {
-        return PancakeLibrary.getAmountIn(amountOut, reserveIn, reserveOut);
+        return AmmLibrary.getAmountIn(amountOut, reserveIn, reserveOut);
     }
 
     /**
@@ -382,7 +382,7 @@ abstract contract RouterHelper is IRouterHelper {
         uint256 amountIn,
         address[] memory path
     ) external view virtual override returns (uint256[] memory amounts) {
-        return PancakeLibrary.getAmountsOut(factory, amountIn, path);
+        return AmmLibrary.getAmountsOut(factory, amountIn, path);
     }
 
     /**
@@ -394,6 +394,6 @@ abstract contract RouterHelper is IRouterHelper {
         uint256 amountOut,
         address[] memory path
     ) external view virtual override returns (uint256[] memory amounts) {
-        return PancakeLibrary.getAmountsIn(factory, amountOut, path);
+        return AmmLibrary.getAmountsIn(factory, amountOut, path);
     }
 }

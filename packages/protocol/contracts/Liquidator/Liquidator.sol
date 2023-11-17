@@ -107,7 +107,7 @@ contract Liquidator is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice Constructor for the implementation contract. Sets immutable variables.
     /// @param comptroller_ The address of the Comptroller contract
-    /// @param seBnb_ The address of the VBNB
+    /// @param seBnb_ The address of the SeBNB
     /// @param treasury_ The address of Segment treasury
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address comptroller_, address payable seBnb_, address treasury_) {
@@ -130,7 +130,7 @@ contract Liquidator is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     /// @dev Liquidator initializer for derived contracts.
     /// @param treasuryPercentMantissa_ Treasury share, scaled by 1e18 (e.g. 0.2 * 1e18 for 20%)
     function __Liquidator_init(uint256 treasuryPercentMantissa_) internal onlyInitializing {
-        __Ownable2Step_init();
+        __Ownable_init_unchained(msg.sender);
         __ReentrancyGuard_init();
         __Liquidator_init_unchained(treasuryPercentMantissa_);
     }

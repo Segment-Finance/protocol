@@ -2,9 +2,10 @@
 pragma solidity 0.8.20;
 
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import { AccessControlledV8 } from "../../../governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import { AccessControlledV8 } from "../../../governance/contracts/Governance/AccessControlledV8.sol";
 
 import { ExponentialNoError } from "../ExponentialNoError.sol";
 import { SeToken } from "../SeToken.sol";
@@ -27,7 +28,7 @@ import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
  * entities to ensure that the `RewardsDistributor` holds enough tokens to distribute the accumulated rewards of users and contributors.
  */
 contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, AccessControlledV8, MaxLoopsLimitHelper {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     struct RewardToken {
         // The market's last updated rewardTokenBorrowIndex or rewardTokenSupplyIndex
@@ -70,7 +71,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
 
     Comptroller private comptroller;
 
-    IERC20Upgradeable public rewardToken;
+    IERC20 public rewardToken;
 
     /// @notice Emitted when REWARD TOKEN is distributed to a supplier
     event DistributedSupplierRewardToken(
@@ -140,13 +141,13 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
      */
     function initialize(
         Comptroller comptroller_,
-        IERC20Upgradeable rewardToken_,
+        IERC20 rewardToken_,
         uint256 loopsLimit_,
         address accessControlManager_
     ) external initializer {
         comptroller = comptroller_;
         rewardToken = rewardToken_;
-        __Ownable2Step_init();
+        __Ownable_init_unchained(msg.sender);
         __AccessControlled_init_unchained(accessControlManager_);
 
         _setMaxLoopsLimit(loopsLimit_);

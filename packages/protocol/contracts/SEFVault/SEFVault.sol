@@ -7,7 +7,7 @@ import "../Utils/IBEP20.sol";
 import "./SEFVaultStorage.sol";
 import "./SEFVaultErrorReporter.sol";
 import "../Utils/SafeCast.sol";
-import "../../../governance-contracts/contracts/Governance/AccessControlledV5.sol";
+import "../../../governance/contracts/Governance/AccessControlledV5.sol";
 
 interface ISEFStore {
     function safeRewardTransfer(address _token, address _to, uint256 _amount) external;

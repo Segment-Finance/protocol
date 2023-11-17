@@ -2,8 +2,8 @@
 pragma solidity 0.8.20;
 
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ComptrollerInterface } from "../ComptrollerInterface.sol";
@@ -11,7 +11,7 @@ import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { SeToken } from "../SeToken.sol";
 
 contract ReserveHelpers is Ownable2StepUpgradeable {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     uint256 private constant NOT_ENTERED = 1;
 
@@ -21,9 +21,9 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable CORE_POOL_COMPTROLLER;
 
-    // Address of the VBNB
+    // Address of the SeBNB
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address public immutable VBNB;
+    address public immutable SeBNB;
 
     // Address of the native wrapped token
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -70,13 +70,13 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address corePoolComptroller_, address vbnb_, address nativeWrapped_) {
+    constructor(address corePoolComptroller_, address sebnb_, address nativeWrapped_) {
         ensureNonzeroAddress(corePoolComptroller_);
-        ensureNonzeroAddress(vbnb_);
+        ensureNonzeroAddress(sebnb_);
         ensureNonzeroAddress(nativeWrapped_);
 
         CORE_POOL_COMPTROLLER = corePoolComptroller_;
-        VBNB = vbnb_;
+        SeBNB = sebnb_;
         NATIVE_WRAPPED = nativeWrapped_;
     }
 
@@ -90,7 +90,7 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
     function sweepToken(address _token, address _to) external onlyOwner nonReentrant {
         ensureNonzeroAddress(_to);
         uint256 balanceDfference_;
-        uint256 balance_ = IERC20Upgradeable(_token).balanceOf(address(this));
+        uint256 balance_ = IERC20(_token).balanceOf(address(this));
 
         require(balance_ > assetsReserves[_token], "ReserveHelpers: Zero surplus tokens");
         unchecked {
@@ -98,7 +98,7 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
         }
 
         emit SweepToken(_token, _to, balanceDfference_);
-        IERC20Upgradeable(_token).safeTransfer(_to, balanceDfference_);
+        IERC20(_token).safeTransfer(_to, balanceDfference_);
     }
 
     /**
@@ -128,7 +128,7 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
         require(poolRegistry_ != address(0), "ReserveHelpers: Pool Registry address is not set");
         require(ensureAssetListed(comptroller, asset), "ReserveHelpers: The pool doesn't support the asset");
 
-        uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
+        uint256 currentBalance = IERC20(asset).balanceOf(address(this));
         uint256 assetReserve = assetsReserves[asset];
         if (currentBalance > assetReserve) {
             uint256 balanceDifference;
@@ -145,7 +145,7 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
         SeToken[] memory coreMarkets = ComptrollerInterface(CORE_POOL_COMPTROLLER).getAllMarkets();
 
         for (uint256 i; i < coreMarkets.length; ++i) {
-            isAssetListed = (VBNB == address(coreMarkets[i]))
+            isAssetListed = (SeBNB == address(coreMarkets[i]))
                 ? (tokenAddress == NATIVE_WRAPPED)
                 : (coreMarkets[i].underlying() == tokenAddress);
 

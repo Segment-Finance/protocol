@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 import "../Utils/SafeBEP20.sol";
 import "../Utils/IBEP20.sol";
 import "./SRTVaultStorage.sol";
-import "../../../governance-contracts/contracts/Governance/AccessControlledV5.sol";
+import "../../../governance/contracts/Governance/AccessControlledV5.sol";
 
 interface ISRTVaultProxy {
     function _acceptImplementation() external;

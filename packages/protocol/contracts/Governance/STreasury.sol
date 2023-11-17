@@ -5,11 +5,11 @@ import "../Utils/SafeBEP20.sol";
 import "../Utils/Ownable.sol";
 
 /**
- * @title VTreasury
+ * @title STreasury
  * @author Segment
  * @notice Protocol treasury that holds tokens owned by Segment
  */
-contract VTreasury is Ownable {
+contract STreasury is Ownable {
     using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
 

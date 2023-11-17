@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.20;
 
-import "../interfaces/VBep20Interface.sol";
+import "../interfaces/SeBep20Interface.sol";
 import "../interfaces/OracleInterface.sol";
-import "../../governance-contracts/Governance/AccessControlledV8.sol";
+import "../../../governance/contracts/Governance/AccessControlledV8.sol";
 
 /**
  * @title BoundValidator

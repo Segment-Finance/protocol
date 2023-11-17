@@ -2,9 +2,9 @@
 pragma solidity 0.8.20;
 
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { AccessControlledV8 } from "../../../governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { AccessControlledV8 } from "../../../governance/contracts/Governance/AccessControlledV8.sol";
 
 import { PoolRegistryInterface } from "./PoolRegistryInterface.sol";
 import { Comptroller } from "../Comptroller.sol";
@@ -34,7 +34,7 @@ import { ensureNonzeroAddress } from "../lib/validators.sol";
  * specific assets and custom risk management configurations according to their markets.
  */
 contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegistryInterface {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     struct AddMarketInput {
         SeToken seToken;
@@ -114,7 +114,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
      * @param accessControlManager_ AccessControlManager contract address
      */
     function initialize(address accessControlManager_) external initializer {
-        __Ownable2Step_init();
+        __Ownable_init_unchained(msg.sender);
         __AccessControlled_init_unchained(accessControlManager_);
     }
 
@@ -169,7 +169,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         address comptrollerAddress = address(seToken.comptroller());
         Comptroller comptroller = Comptroller(comptrollerAddress);
         address underlyingAddress = seToken.underlying();
-        IERC20Upgradeable underlying = IERC20Upgradeable(underlyingAddress);
+        IERC20 underlying = IERC20(underlyingAddress);
 
         require(_poolByComptroller[comptrollerAddress].creator != address(0), "PoolRegistry: Pool not registered");
         // solhint-disable-next-line reason-string
@@ -292,7 +292,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         return numberOfPools_;
     }
 
-    function _transferIn(IERC20Upgradeable token, address from, uint256 amount) internal returns (uint256) {
+    function _transferIn(IERC20 token, address from, uint256 amount) internal returns (uint256) {
         uint256 balanceBefore = token.balanceOf(address(this));
         token.safeTransferFrom(from, address(this), amount);
         uint256 balanceAfter = token.balanceOf(address(this));

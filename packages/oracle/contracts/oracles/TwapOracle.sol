@@ -2,15 +2,16 @@
 pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "../libraries/PancakeLibrary.sol";
+import "../../../protocol/contracts/Swap/lib/AmmLibrary.sol";
 import "../interfaces/OracleInterface.sol";
-import "../interfaces/VBep20Interface.sol";
-import "../../governance-contracts/Governance/AccessControlledV8.sol";
+import "../interfaces/SeBep20Interface.sol";
+import "../../../governance/contracts/Governance/AccessControlledV8.sol";
+import { FixedPoint, AmmOracleLibrary } from "../libraries/PancakeLibrary.sol";
 
 /**
  * @title TwapOracle
  * @author Segment
- * @notice This oracle fetches price of assets from PancakeSwap.
+ * @notice This oracle fetches price of assets from AmmSwap.
  */
 contract TwapOracle is AccessControlledV8, TwapInterface {
     using FixedPoint for *;
@@ -25,11 +26,11 @@ contract TwapOracle is AccessControlledV8, TwapInterface {
         address asset;
         /// @notice Decimals of asset represented as 1e{decimals}
         uint256 baseUnit;
-        /// @notice The address of Pancake pair
-        address pancakePool;
+        /// @notice The address of Amm pair
+        address ammPool;
         /// @notice Whether the token is paired with WBNB
         bool isBnbBased;
-        /// @notice A flag identifies whether the Pancake pair is reversed
+        /// @notice A flag identifies whether the Amm pair is reversed
         /// e.g. SEF-WBNB is reversed, while WBNB-SEF is not.
         bool isReversedPool;
         /// @notice The minimum window in seconds required between TWAP updates
@@ -72,7 +73,7 @@ contract TwapOracle is AccessControlledV8, TwapInterface {
     event AnchorPriceUpdated(address indexed asset, uint256 price, uint256 oldTimestamp, uint256 newTimestamp);
 
     /// @notice Emit this event when new token configs are added
-    event TokenConfigAdded(address indexed asset, address indexed pancakePool, uint256 indexed anchorPeriod);
+    event TokenConfigAdded(address indexed asset, address indexed ammPool, uint256 indexed anchorPeriod);
 
     modifier notNullAddress(address someone) {
         if (someone == address(0)) revert("can't be zero address");
@@ -145,13 +146,13 @@ contract TwapOracle is AccessControlledV8, TwapInterface {
      * @custom:error Range error is thrown if base unit is not greater than zero
      * @custom:error Value error is thrown if base unit decimals is not the same as asset decimals
      * @custom:error NotNullAddress error is thrown if address of asset is null
-     * @custom:error NotNullAddress error is thrown if PancakeSwap pool address is null
+     * @custom:error NotNullAddress error is thrown if AmmSwap pool address is null
      * @custom:event Emits TokenConfigAdded event if new token config are added with
-     * asset address, PancakePool address, anchor period address
+     * asset address, AmmPool address, anchor period address
      */
     function setTokenConfig(
         TokenConfig memory config
-    ) public notNullAddress(config.asset) notNullAddress(config.pancakePool) {
+    ) public notNullAddress(config.asset) notNullAddress(config.ammPool) {
         _checkAccessAllowed("setTokenConfig(TokenConfig)");
 
         if (config.anchorPeriod == 0) revert("anchor period must be positive");
@@ -163,11 +164,11 @@ contract TwapOracle is AccessControlledV8, TwapInterface {
         // Initialize observation data
         observations[config.asset].push(Observation(block.timestamp, cumulativePrice));
         tokenConfigs[config.asset] = config;
-        emit TokenConfigAdded(config.asset, config.pancakePool, config.anchorPeriod);
+        emit TokenConfigAdded(config.asset, config.ammPool, config.anchorPeriod);
     }
 
     /**
-     * @notice Updates the current token/BUSD price from PancakeSwap, with 18 decimals of precision.
+     * @notice Updates the current token/BUSD price from AmmSwap, with 18 decimals of precision.
      * @return anchorPrice anchor price of the asset
      * @custom:error Missing error is thrown if token config does not exist
      */
@@ -186,11 +187,11 @@ contract TwapOracle is AccessControlledV8, TwapInterface {
     }
 
     /**
-     * @notice Fetches the current token/WBNB and token/BUSD price accumulator from PancakeSwap.
+     * @notice Fetches the current token/WBNB and token/BUSD price accumulator from AmmSwap.
      * @return cumulative price of target token regardless of pair order
      */
     function currentCumulativePrice(TokenConfig memory config) public view returns (uint256) {
-        (uint256 price0, uint256 price1, ) = PancakeOracleLibrary.currentCumulativePrices(config.pancakePool);
+        (uint256 price0, uint256 price1, ) = AmmOracleLibrary.currentCumulativePrices(config.ammPool);
         if (config.isReversedPool) {
             return price1;
         } else {
@@ -199,7 +200,7 @@ contract TwapOracle is AccessControlledV8, TwapInterface {
     }
 
     /**
-     * @notice Fetches the current token/BUSD price from PancakeSwap, with 18 decimals of precision.
+     * @notice Fetches the current token/BUSD price from AmmSwap, with 18 decimals of precision.
      * @return price Asset price in USD, with 18 decimals
      * @custom:error Timing error is thrown if current time is not greater than old observation timestamp
      * @custom:error Zero price error is thrown if token is BNB based and price is zero
@@ -222,7 +223,7 @@ contract TwapOracle is AccessControlledV8, TwapInterface {
             timeElapsed = block.timestamp - oldTimestamp;
         }
 
-        // Calculate Pancake *twap**
+        // Calculate Amm *twap**
         FixedPoint.uq112x112 memory priceAverage = FixedPoint.uq112x112(
             uint224((nowCumulativePrice - oldCumulativePrice) / timeElapsed)
         );
