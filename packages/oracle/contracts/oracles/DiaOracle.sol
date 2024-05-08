@@ -111,7 +111,7 @@ contract DiaOracle is Ownable, OracleInterface {
         manager = _manager;
         emit ManagerSet(_manager);
     }
-    function updateMultiplier (address token, uint32 multiplier) external {
+    function updateMultiplier (address token, uint256 multiplier) external {
         if (msg.sender != manager) {
             revert Unauthorized();
         }
