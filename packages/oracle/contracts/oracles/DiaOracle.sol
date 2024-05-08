@@ -19,8 +19,11 @@ contract DiaOracle is Ownable, OracleInterface {
     error UnknownAddress(address asset);
     error InvalidPrice(address asset, uint128 price);
     error StalePrice(address asset, uint128 updatedAt);
+    error Unauthorized();
 
-    event TokenConfig (address asset);
+    event TokenConfig (address indexed asset);
+    event ManagerSet (address manager);
+    event MultiplierSet (address indexed asset, uint256 multiplier);
 
     struct TTokenConfig {
         /// @notice ERC20 token address
@@ -39,12 +42,19 @@ contract DiaOracle is Ownable, OracleInterface {
 
         /// @notice  Optionally the next hop towards USD
         address route;
+
+        /// @notice In case the price is a ratio of the underlying 1 ether = 100%;
+        uint256 multiplier;
     }
+
+    uint256 constant public MANTISSA = 1 ether;
 
     IDiaOracle public dia;
 
     /// @notice Token config by assets
     mapping(address => TTokenConfig) public tokens;
+
+    address public manager;
 
     /// @notice Constructor for the implementation contract.
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -81,7 +91,9 @@ contract DiaOracle is Ownable, OracleInterface {
             uint uPrice = getPrice(token.route);
             answer = uPrice * answer / 10**18;
         }
-
+        if (token.multiplier != 0) {
+            answer = answer * token.multiplier / MANTISSA;
+        }
         return answer;
     }
 
@@ -93,5 +105,18 @@ contract DiaOracle is Ownable, OracleInterface {
     function updateTokenInternal (TTokenConfig memory config) internal {
         tokens[config.asset] = config;
         emit TokenConfig(config.asset);
+    }
+
+    function updateManager (address _manager) external onlyOwner {
+        manager = _manager;
+        emit ManagerSet(_manager);
+    }
+    function updateMultiplier (address token, uint32 multiplier) external {
+        if (msg.sender != manager) {
+            revert Unauthorized();
+        }
+        require(tokens[token].asset == token, "Invalid token");
+        tokens[token].multiplier = multiplier;
+        emit MultiplierSet(token, multiplier);
     }
 }
